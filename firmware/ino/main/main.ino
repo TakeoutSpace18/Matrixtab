@@ -1,15 +1,16 @@
-#include <Max72xxPanel.h>
+#include <dummy.h>
+
 #include <Adafruit_GFX.h>
-#include <ArduinoJson.h>
+#include <Max72xxPanel.h>
+
+#include <file.h> 
 
 
 
 #define HORIZONTAL_MATRIX 4
 #define VERTCAL_MATRIX 2
 
-#define LOAD_PIN
 int CS_PIN = 0;
-#define CLK_PIN
 
 
 int brightness = 8; //Яркость матрицы
@@ -26,15 +27,14 @@ Max72xxPanel matrix = Max72xxPanel(CS_PIN, HORIZONTAL_MATRIX, VERTCAL_MATRIX);
 
 void draw_img(String data)
 {
-    for (int y = 0; y <= vertical_px - 1; y++)
+    for (int y = 0; y < vertical_px; y++)
     {
-        for (int x = 0; x <= horizontal_px -1; x++)
+        for (int x = 0; x < horizontal_px; x++)
         {
-            matrix.drawPixel(x, y, data[cur_symbol]);
+            matrix.drawPixel(x, y, data[cur_symbol] - '0');
 
             cur_symbol++;
         }
-        cur_symbol++;
     }
     matrix.write();
 }
@@ -43,6 +43,11 @@ void draw_img(String data)
 void setup()
 {
 matrix.setIntensity(brightness);
+for(int i=0; i<8; i++)
+{
+  matrix.setRotation(i,1);
+}
+
 draw_img(img);
 }
 
