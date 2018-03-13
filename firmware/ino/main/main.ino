@@ -1,10 +1,6 @@
-#include <dummy.h>
-
+#include <FS.h>
 #include <Adafruit_GFX.h>
 #include <Max72xxPanel.h>
-
-#include <file.h> 
-
 
 
 #define HORIZONTAL_MATRIX 4

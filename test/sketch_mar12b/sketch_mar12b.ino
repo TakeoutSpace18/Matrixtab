@@ -46,12 +46,13 @@ void handleRoot() {
 void setup(void){
     delay(1000);
     Serial.begin(115200);
+    SPIFFS.begin();
     WiFi.softAP(ssid);
 
     server.on("/", handleRoot);
     server.begin();
     delay(500);
-    Serial.println(WiFi.localIP());
+    Serial.println(WiFi.softAPIP());
 
    matrix.setIntensity(7);
 }
