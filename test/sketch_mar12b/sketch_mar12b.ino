@@ -1,6 +1,8 @@
+
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+#include "FS.h"
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -17,16 +19,7 @@ int spacer = 1;
 int width = 5 + spacer;
 
 // HTML страница index.html
-const char page[] = 
-"<html>"
-"<title>Ticker control</title>"
-"<body>"
-"<form action=\"\" method=\"post\">"
-"<input type=\"text\" name=\"text\"/>"
-"<input type=\"submit\" value=\"Set text\">"
-"</form>"
-"</body>"
-"</html>";
+char page;
 
 // функция вызывается, когда клиент жмет кнопку
 void handleSubmit(){
@@ -51,7 +44,19 @@ void setup(void){
 
     server.on("/", handleRoot);
     server.begin();
+    delay(1000);
+    String s;
+    String file;
+    File f = SPIFFS.open("/main.html", "r");
+    while (f.position()<f.size())
+        {
+          s=f.readStringUntil('\n');
+          s.trim();
+          page.append(s);
+        } 
+        f.close();
     delay(500);
+    Serial.println(file);
     Serial.println(WiFi.softAPIP());
 
    matrix.setIntensity(7);

@@ -1,3 +1,7 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
 #include <FS.h>
 #include <Adafruit_GFX.h>
 #include <Max72xxPanel.h>
@@ -7,6 +11,9 @@
 #define VERTCAL_MATRIX 2
 
 int CS_PIN = 0;
+
+const char* ssid = "Keenetic-4372";
+const char* password = "xEMiQFt3";
 
 
 int brightness = 8; //Яркость матрицы
@@ -19,7 +26,26 @@ int num_px = horizontal_px * vertical_px;
 
 
 Max72xxPanel matrix = Max72xxPanel(CS_PIN, HORIZONTAL_MATRIX, VERTCAL_MATRIX);
+ESP8266WebServer server(80);
 
+bool handleFileRead(String path) {
+  DBG_OUTPUT_PORT.println("handleFileRead: " + path);
+  if (path.endsWith("/")) {
+    path += "index.htm";
+  }
+  String contentType = getContentType(path);
+  String pathWithGz = path + ".gz";
+  if (SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)) {
+    if (SPIFFS.exists(pathWithGz)) {
+      path += ".gz";
+    }
+    File file = SPIFFS.open(path, "r");
+    server.streamFile(file, contentType);
+    file.close();
+    return true;
+  }
+  return false;
+}
 
 void draw_img(String data)
 {
