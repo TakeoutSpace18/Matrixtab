@@ -48,6 +48,12 @@ bool handleFileRead(String path) {
   return false;
 }
 
+void handleImgReceive(){
+  img = server.arg("img");
+  draw_img(img);
+  server.send(200, "text/plain", "OK");
+}
+
 void draw_img(String data) {
     int cur_symbol = 0;
     for (int y = 0; y < vertical_px; y++)
@@ -72,6 +78,28 @@ void printExistsFiles(){
   }
 }
 
+void matrix_init(){
+  matrix.setIntensity(brightness);
+  for(int i=0; i<8; i++)
+  {
+    matrix.setRotation(i,1);
+  }
+}
+
+void server_init(){
+  
+  server.on("/img", handleImgReceive);
+
+  server.onNotFound([]() {
+    if (!handleFileRead(server.uri())) {
+      server.send(404, "text/plain", "FileNotFound");
+    }
+  });
+
+  server.begin();
+
+}
+
 void connectWifi(){
   Serial.println("");
   Serial.println("Trying to connect home wi-fi");
@@ -79,7 +107,7 @@ void connectWifi(){
   WiFi.begin(home_wifi_ssid, home_wifi_password);
   for(int i = 0; i < 25; i++){
     Serial.print(".");
-    delay(150);
+    delay(200);
   }
   Serial.println("");
   
@@ -102,24 +130,9 @@ void setup()
   SPIFFS.begin();
   printExistsFiles();
   connectWifi();
-
-  server.onNotFound([]() {
-    if (!handleFileRead(server.uri())) {
-      server.send(404, "text/plain", "FileNotFound");
-    }
-  });
-
-  server.begin();
-
-  matrix.setIntensity(brightness);
-  for(int i=0; i<8; i++)
-  {
-    matrix.setRotation(i,1);
-  }
-
-
-
-draw_img(img);
+  server_init();
+  matrix_init();
+  draw_img(img);
 }
 
 void loop()

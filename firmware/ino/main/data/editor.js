@@ -35,7 +35,6 @@ class Matrix
             this.cur_y += (circle_radius*2 + space);
             this.cur_x = (border + circle_radius);   
         }
-        //alert(this.leds[54].state)
 
     }
 
@@ -49,7 +48,6 @@ class Matrix
 
             tmp = (this.leds[i].state);
             txt += tmp;
-            console.log(txt);
         }
         return txt;
     }
