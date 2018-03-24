@@ -1,7 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
 #include <FS.h>
 #include <Adafruit_GFX.h>
 #include <Max72xxPanel.h>
@@ -11,6 +10,7 @@
 #define VERTCAL_MATRIX 2
 
 const int CS_PIN = 0;
+const int home_wifi_led_pin = 4;
 
 const char* home_wifi_ssid = "Keenetic-4372";
 const char* home_wifi_password = "xEMiQFt3";
@@ -97,29 +97,47 @@ void server_init(){
   });
 
   server.begin();
-
 }
 
 void connectWifi(){
+  pinMode(home_wifi_led_pin, OUTPUT);
   Serial.println("");
   Serial.println("Trying to connect home wi-fi");
+
   WiFi.mode(WIFI_STA);
   WiFi.begin(home_wifi_ssid, home_wifi_password);
-  for(int i = 0; i < 25; i++){
+
+  bool led = false;
+  int wifi_expect_time = 5000; // Время на попытку подключится к домашнему wifi
+  int start_millis = millis();
+  int cur_millis;
+
+  while (WiFi.status() != WL_CONNECTED && millis() - wifi_expect_time >= start_millis){
     Serial.print(".");
-    delay(200);
+
+    if (led){
+      digitalWrite(home_wifi_led_pin, LOW);
+    }
+    else{digitalWrite(home_wifi_led_pin, HIGH);}
+
+    led = !led;
+    delay(150);
   }
   Serial.println("");
   
   if (WiFi.status() == WL_CONNECTED){
+    digitalWrite(home_wifi_led_pin, HIGH);
     Serial.println("Successfully!");
     Serial.println(WiFi.localIP());
   }
   else{
+    digitalWrite(home_wifi_led_pin, LOW);
     Serial.println("Failure, creating access point.");
     WiFi.mode(WIFI_AP);
     WiFi.softAP(ssid);
   }
+  delay(100);
+  
   Serial.println("");
 }
 
