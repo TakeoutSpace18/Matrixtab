@@ -4,10 +4,74 @@
 #include <FS.h>
 #include <Adafruit_GFX.h>
 #include <Max72xxPanel.h>
+#include <AceButton.h>
 
+using namespace ace_button;
 
 #define HORIZONTAL_MATRIX 4
 #define VERTCAL_MATRIX 2
+
+
+
+
+
+
+
+class MoovingPoint
+{
+    int x;
+    int y;
+public:
+    MoovingPoint()
+    {
+        x = 5;
+        y = 5;
+    }
+
+    void handleEvent(uint8_t btn_num, uint8_t type)
+    {
+        if(type == 1)
+        {
+            switch(btn_num){
+
+                case 1:
+                    y--;
+                    break;
+                case 2:
+                    x++;
+                    break;
+                case 3:
+                    y++;
+                    break;
+                case 4:
+                    x--;
+                    break;
+                case 5:
+                    x--;
+            }
+        }
+        
+    }
+
+    void render(Max72xxPanel mtx)
+    {   
+        mtx.fillScreen(LOW);
+        mtx.drawPixel(x,y, HIGH);
+        mtx.write();
+    }
+};
+
+
+
+
+
+
+
+const uint8_t left_pin = 2;
+const uint8_t right_pin = 16;
+const uint8_t down_pin = 5;
+const uint8_t up_pin = 12;
+const uint8_t back_pin = 15;
 
 const int CS_PIN = 0;
 const int home_wifi_led_pin = 4;
@@ -29,8 +93,19 @@ int vertical_px = VERTCAL_MATRIX * 8;
 int num_px = horizontal_px * vertical_px;
 
 
+ButtonConfig btn_config;
+AceButton btn_up(up_pin);
+AceButton btn_down(down_pin);
+AceButton btn_right(right_pin);
+AceButton btn_left(left_pin);
+AceButton btn_back(back_pin);
+
+MoovingPoint gm;
+
 Max72xxPanel matrix = Max72xxPanel(CS_PIN, HORIZONTAL_MATRIX, VERTCAL_MATRIX);
 ESP8266WebServer server(80);
+
+
 
 bool handleFileRead(String path) {
   Serial.println("handleFileRead: " + path);
@@ -48,7 +123,7 @@ bool handleFileRead(String path) {
   return false;
 }
 
-void handleImgReceive(){
+void handleImgReceive() {
   img = server.arg("img");
   draw_img(img);
   server.send(200, "text/plain", "OK");
@@ -68,7 +143,7 @@ void draw_img(String data) {
     matrix.write();
 }
 
-void printExistsFiles(){
+void printExistsFiles() {
   Dir dir = SPIFFS.openDir("/");
   Serial.println("");
   Serial.println("           Files:");
@@ -77,8 +152,8 @@ void printExistsFiles(){
     Serial.println(dir.fileName());
   }
 }
-
-void matrix_init(){
+ 
+void matrix_init() {
   matrix.setIntensity(brightness);
   for(int i=0; i<8; i++)
   {
@@ -86,7 +161,7 @@ void matrix_init(){
   }
 }
 
-void server_init(){
+void server_init() {
   
   server.on("/img", handleImgReceive);
 
@@ -99,7 +174,7 @@ void server_init(){
   server.begin();
 }
 
-void connectWifi(){
+void connectWifi() {
   pinMode(home_wifi_led_pin, OUTPUT);
   Serial.println("");
   Serial.println("Trying to connect home wi-fi");
@@ -141,20 +216,82 @@ void connectWifi(){
   Serial.println("");
 }
 
+void buttons_init() {
+  btn_config.setFeature(ButtonConfig::kFeatureClick);
+  btn_config.setEventHandler(handleButton);
+
+  pinMode(up_pin, INPUT_PULLUP);
+  pinMode(down_pin, INPUT_PULLUP);
+  pinMode(right_pin, INPUT_PULLUP);
+  pinMode(left_pin, INPUT_PULLUP);
+  pinMode(back_pin, INPUT_PULLUP);
+
+  btn_back.setButtonConfig(&btn_config);
+  btn_up.setButtonConfig(&btn_config);
+  btn_left.setButtonConfig(&btn_config);
+  btn_right.setButtonConfig(&btn_config);
+  btn_down.setButtonConfig(&btn_config);
+}
+
+void check_buttons() {
+  btn_back.check();
+  btn_up.check();
+  btn_left.check();
+  btn_right.check();
+  btn_down.check();
+}
+void handleButton(AceButton* button, uint8_t eventType, uint8_t buttonState){
+  uint8_t pin = button->getPin();
+  uint8_t btn_num;
+  uint8_t type;
+  switch(pin){    
+    case left_pin:
+      btn_num = 4;
+      break;
+    case up_pin:
+      btn_num = 1;
+      break;
+    case down_pin:
+      btn_num = 3;
+      break;
+    case right_pin:
+      btn_num = 2;
+      break;
+
+    case back_pin:
+      btn_num = 5;
+  }
+
+  switch(eventType){
+    case AceButton::kEventPressed:
+      type = 1;
+      break;
+    case AceButton::kEventReleased:
+      type = 2;
+      break;
+    case AceButton::kEventClicked:
+      type = 3;
+  }
+  gm.handleEvent(btn_num, type);
+}
 
 void setup()
-{
+{ 
+  matrix_init();
+  draw_img(img);
   Serial.begin(115200);
   SPIFFS.begin();
   printExistsFiles();
   connectWifi();
+  buttons_init();
   server_init();
-  matrix_init();
-  draw_img(img);
+
 }
 
 void loop()
 {
+  check_buttons();
+  gm.render(matrix);
   server.handleClient();
 }
 
