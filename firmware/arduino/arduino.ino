@@ -172,7 +172,7 @@ void setup()
   Serial.begin(9600);
   matrix_init();
   draw_img(img);
-  delay(10000);
+  delay(1500);
   buttons_init();
 
 }

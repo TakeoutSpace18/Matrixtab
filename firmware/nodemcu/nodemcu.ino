@@ -1,9 +1,10 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <FS.h>
+#include <SPI.h>
+#include <SD.h>
 
-
+const int SD_card_CS_pin = 15;
 
 const int home_wifi_led_pin = 4;
 
@@ -17,40 +18,79 @@ String img = "000000000000000000000000000000000001000000011100001110000010010000
 
 ESP8266WebServer server(80);
 
-
+bool has_SD = false;
 
 bool handleFileRead(String path) {
+
   Serial.println("handleFileRead: " + path);
+
   if (path.endsWith("/")) {
     path += "index.htm";
   }
-  String contentType = "text/html";
-  if (SPIFFS.exists(path)) {
 
-    File file = SPIFFS.open(path, "r");
-    server.streamFile(file, contentType);
-    file.close();
+  String dataType = "text/plain";
+  if(path.endsWith(".src")) path = path.substring(0, path.lastIndexOf("."));
+    else if(path.endsWith(".htm")) dataType = "text/html";
+    else if(path.endsWith(".css")) dataType = "text/css";
+    else if(path.endsWith(".js")) dataType = "application/javascript";
+    else if(path.endsWith(".png")) dataType = "image/png";
+    else if(path.endsWith(".gif")) dataType = "image/gif";
+    else if(path.endsWith(".jpg")) dataType = "image/jpeg";
+    else if(path.endsWith(".ico")) dataType = "image/x-icon";
+    else if(path.endsWith(".xml")) dataType = "text/xml";
+    else if(path.endsWith(".pdf")) dataType = "application/pdf";
+    else if(path.endsWith(".zip")) dataType = "application/zip";
+
+    File dataFile = SD.open(path.c_str());
+    if(dataFile.isDirectory()){
+      path += "/index.htm";
+      dataType = "text/html";
+      dataFile = SD.open(path.c_str());
+    }
+
+    if (!dataFile)
+      return false;
+
+    server.streamFile(dataFile, dataType);
+
+    dataFile.close();
     return true;
-  }
-  return false;
 }
 
 void handleImgReceive() {
   img = server.arg("img");
-  draw_img(img);
+  //draw_img(img);
   server.send(200, "text/plain", "OK");
 }
 
 void printExistsFiles() {
-  Dir dir = SPIFFS.openDir("/");
-  Serial.println("");
-  Serial.println("           Files:");
-
-  while (dir.next()){
-    Serial.println(dir.fileName());
-  }
+  File root = SD.open("/");
+  printDirectory(root, 0);
 }
  
+void printDirectory(File dir, int numTabs) {
+  while (true) {
+ 
+    File entry =  dir.openNextFile();
+    if (! entry) {
+      // файлов больше нет
+      break;
+    }
+    for (uint8_t i = 0; i < numTabs; i++) {
+      Serial.print('\t');
+    }
+    Serial.print(entry.name());
+    if (entry.isDirectory()) {
+      Serial.println("/");
+      printDirectory(entry, numTabs + 1);
+    } else {
+      // у файлов есть размеры, у директорий – нет:
+      Serial.print("\t\t");
+      Serial.println(entry.size(), DEC);
+    }
+    entry.close();
+  }
+}
 
 void server_init() {
   
@@ -101,25 +141,34 @@ void connectWifi() {
     Serial.println("Failure, creating access point.");
     WiFi.mode(WIFI_AP);
     WiFi.softAP(ssid);
+    Serial.println(WiFi.softAPIP());
   }
   delay(100);
   
   Serial.println("");
 }
 
+void SD_init() {
+  if (SD.begin(SD_card_CS_pin)) {
+    has_SD = true;
+    Serial.println('SD card initialized');
+  }
+  else {
+    has_SD = false;
+    Serial.println('SD card error!');
+  }
 
+}
 
 
 void setup()
 { 
   
-
   Serial.begin(115200);
-  SPIFFS.begin();
+  SD_init();
   printExistsFiles();
   connectWifi();
   server_init();
-
 }
 
 void loop()
